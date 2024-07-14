@@ -135,11 +135,23 @@ bool chillerTimerCheck(){
 }
 
 void machineOffState(){
+  delay(5000);
   return;
 }
 
 void chillerToggleState(){
-  return;
+  if(machineOn){
+    digitalWrite(COOLER_RELAY, ON);
+    laserStatus=machineIdle;
+    return;
+  } else if(!machineOn){
+    digitalWrite(COOLER_RELAY, OFF);
+    laserStatus=machineOff;
+    return;
+  } else {
+    laserStatus=err;
+    return;
+  }
 }
 
 void machineIdleState(){
@@ -155,6 +167,8 @@ void jobIdleState(){
 }
 
 void airToggleState(){
+  digitalWrite(AIR_RELAY,!digitalRead(AIR_REQUEST));
+  laserStatus = jobIdle;
   return;
 }
 
