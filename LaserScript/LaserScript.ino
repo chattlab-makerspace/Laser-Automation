@@ -10,7 +10,7 @@
 //inputs
 #define MACHINE_POWER 4
 #define AIR_REQUEST 5
-#define SAFETY_SWITCH 6
+#define JOB_RUNNING 6
 #define MANUAL_RESET 7
 
 unsigned long seconds = 1000;
@@ -38,15 +38,7 @@ const byte chillerWait = 7;
 const byte err = 100;
 
 
-bool coolerStatus = !digitalRead(COOLER_RELAY);
-bool exhaustStatus = !digitalRead(FAN_RELAY);
-bool airStatus = !digitalRead(AIR_RELAY);
-
-
 bool machineOn = digitalRead(MACHINE_POWER);
-bool airRequested = digitalRead(AIR_REQUEST);
-bool estopped = digitalRead(SAFETY_SWITCH);
-bool manualReset = digitalRead(MANUAL_RESET);
 
 void (* resetFunc) (void) = 0;
 
@@ -79,15 +71,6 @@ void relayTest(){
 
 void inputCheck(){
   machineOn = digitalRead(MACHINE_POWER);
-  airRequested = digitalRead(AIR_REQUEST);
-  estopped = digitalRead(SAFETY_SWITCH);
-  manualReset = digitalRead(MANUAL_RESET);
-}
-
-void outputCheck(){
-  coolerStatus = !digitalRead(COOLER_RELAY);
-  exhaustStatus = !digitalRead(FAN_RELAY);
-  airStatus = !digitalRead(AIR_RELAY);
 }
 
 void exhaustTimerSet(){
@@ -135,6 +118,9 @@ bool chillerTimerCheck(){
 }
 
 void machineOffState(){
+  if(machineOn){
+    laserStatus = chillerToggle;
+  }
   delay(5000);
   return;
 }
@@ -148,21 +134,47 @@ void chillerToggleState(){
     digitalWrite(COOLER_RELAY, OFF);
     laserStatus=machineOff;
     return;
-  } else {
-    laserStatus=err;
-    return;
   }
 }
 
 void machineIdleState(){
+  if (!machineOn) {
+    laserStatus = chillerWait;
+    return;
+  } else if (digitalRead(JOB_RUNNING)){
+    laserStatus = exhaustToggle;
+    return;
+  } else if(!digitalRead(FAN_RELAY)) {
+    laserStatus = exhaustTimer;
+    return;
+  }
   return;
 }
 
 void exhaustToggleState(){
+  if(!digitalRead(JOB_RUNNING)){
+    digitalWrite(FAN_RELAY,OFF);
+    laserStatus = machineIdle;
+    return;
+  } else {
+    digitalWrite(FAN_RELAY,ON);
+    laserStatus = jobIdle;
+    return;
+  }
   return;
 }
 
 void jobIdleState(){
+  if(digitalRead(AIR_REQUEST)){
+    laserStatus = airToggle;
+    return;
+  } else if (!machineOn){
+    laserStatus = chillerWait;
+    return;
+  } else if (!digitalRead(JOB_RUNNING)){
+    laserStatus = machineIdle;
+    return;
+  }
   return;
 }
 
@@ -173,6 +185,20 @@ void airToggleState(){
 }
 
 void exhaustWaitState(){
+  if(digitalRead(FAN_RELAY) == OFF){
+    laserStatus = chillerWait;
+    return;
+  } else if (digitalRead(JOB_RUNNING)){
+    laserStatus = jobIdle;
+    return;
+  } else if (!exhaustTimerOn){
+    exhaustTimerSet();
+    return;
+  } else if (exhaustTimerCheck()){
+    exhaustTimerReset();
+    laserStatus = exhaustToggle;
+    return;
+  }
   return;
 }
 
@@ -181,19 +207,16 @@ void chillerWaitState(){
     chillerTimerReset();
     exhaustTimerReset();
     laserStatus = machineIdle;
-  }
-  if(chillerTimerCheck()){
+    return;
+  } else if(digitalRead(FAN_RELAY) == ON){
+    laserStatus = exhaustWait;
+    return;
+  } else if (!chillerTimerOn) {
+    chillerTimerSet();
+    return;
+  } else if(chillerTimerCheck()){
     laserStatus = chillerToggle;
     return;
-  }
-  if(exhaustStatus == ON){
-    if (!exhaustTimerCheck){
-      exhaustTimerSet();
-      return;
-    } else {
-      laserStatus = exhaustToggle;
-      return;
-    }
   }
 }
 
@@ -244,6 +267,5 @@ void laserState() {
 void loop() {
   //relayTest();
   inputCheck();
-  outputCheck();
   laserState();
 }
