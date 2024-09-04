@@ -42,13 +42,9 @@ class Relay {
 
     void turnOn(){
       if (digitalRead(MACHINE_POWER) == ON && digitalRead(inputPin) == ON){
-        Serial.println("Relay " + String(digitalRead(outputPin)));
         if (digitalRead(outputPin) == OFF){
           digitalWrite(outputPin, ON);
         } else {
-          //timerClear(exhaust);
-          Serial.println(timer.size());
-          Serial.println(timer.empty());
           if(!timer.empty()){
             timer.cancel();
           }
@@ -70,37 +66,6 @@ class Relay {
     }
 };
 
-  /*  
-  
-  bool exhaustOff(void *){
-    digitalWrite(EXHAUST_RELAY, OFF);
-    return false;
-  }
-
-// Exhaust Handling
-  if (digitalRead(MACHINE_POWER) == ON && digitalRead(EXHAUST_REQUEST) == ON){
-    Serial.println("Relay " + String(digitalRead(EXHAUST_RELAY)));
-    if (digitalRead(EXHAUST_RELAY) == OFF){
-      digitalWrite(EXHAUST_RELAY, ON);
-    } else {
-      //timerClear(exhaust);
-      Serial.println(exhaust.size());
-      Serial.println(exhaust.empty());
-      if(!exhaust.empty()){
-        exhaust.cancel();
-      }
-    }
-  }
-  if ((digitalRead(MACHINE_POWER) == OFF || (digitalRead(EXHAUST_REQUEST) == OFF) && digitalRead(EXHAUST_RELAY) == ON)){
-    if (exhaust.empty()){
-      exhaust.in(exhaustDelay, exhaustOff);
-    }
-  }*/
-
-auto air = timer_create_default();
-//auto exhaust = timer_create_default();
-auto chiller = timer_create_default();
-
 unsigned long second = 1000;
 unsigned long minute = 60 * second;
 unsigned long hour = 60 * minute;
@@ -110,9 +75,11 @@ unsigned long exhaustDelay = 20 * second;
 unsigned long chillerDelay = 15 * minute;
 
 Relay exhaust(EXHAUST_REQUEST, EXHAUST_RELAY, exhaustDelay);
+Relay air(AIR_REQUEST, AIR_RELAY, airDelay);
+Relay chiller(CHILLER_REQUEST, CHILLER_RELAY, chillerDelay);
 
 void setup() {
-  Serial.begin(115200);
+  //Serial.begin(115200);
   pinMode(MACHINE_POWER, INPUT_PULLUP);
   pinMode(AIR_REQUEST, INPUT_PULLUP);
   pinMode(JOB_RUNNING, INPUT_PULLUP);
@@ -129,67 +96,8 @@ void setup() {
   digitalWrite(AUX_RELAY, OFF);
 }
 
-
-//bool exhaustOff(void *){
-//  digitalWrite(EXHAUST_RELAY, OFF);
-//  return false;
-//}
-
-bool chillerOff(void *){
-  digitalWrite(CHILLER_RELAY, OFF);
-  return false;
-}
-
-bool airOff(void *){
-  digitalWrite(AIR_RELAY, OFF);
-  return false;
-}
-
-void timerClear(Timer<> timerToClear){
-    // ideally would only happen when timer is set, but library does not easily allow
-    timerToClear.cancel();
-}
-
-void loop() {
-  air.tick();
-  //exhaust.tick();
+void loop (){
+  air.loop();
   exhaust.loop();
-  chiller.tick();
-  // Air Handling
-  if (digitalRead(MACHINE_POWER) == ON && digitalRead(AIR_REQUEST) == ON && digitalRead(AIR_RELAY) == OFF){
-    digitalWrite(AIR_RELAY, ON);
-    timerClear(air);
-  }
-  if ((digitalRead(MACHINE_POWER) == OFF || (digitalRead(AIR_REQUEST) == OFF) && digitalRead(AIR_RELAY) == ON)){
-    air.in(airDelay, airOff);
-  }
-  // Chiller Handling
-  if (digitalRead(MACHINE_POWER) == ON && digitalRead(CHILLER_RELAY) == OFF){
-    digitalWrite(CHILLER_RELAY, ON);
-    timerClear(chiller);
-  }
-  if (digitalRead(MACHINE_POWER) == OFF && digitalRead(CHILLER_RELAY) == ON){
-    chiller.in(chillerDelay, chillerOff);
-  }
-  /*
-  // Exhaust Handling
-  if (digitalRead(MACHINE_POWER) == ON && digitalRead(EXHAUST_REQUEST) == ON){
-    Serial.println("Relay " + String(digitalRead(EXHAUST_RELAY)));
-    if (digitalRead(EXHAUST_RELAY) == OFF){
-      digitalWrite(EXHAUST_RELAY, ON);
-    } else {
-      //timerClear(exhaust);
-      Serial.println(exhaust.size());
-      Serial.println(exhaust.empty());
-      if(!exhaust.empty()){
-        exhaust.cancel();
-      }
-    }
-  }
-  if ((digitalRead(MACHINE_POWER) == OFF || (digitalRead(EXHAUST_REQUEST) == OFF) && digitalRead(EXHAUST_RELAY) == ON)){
-    if (exhaust.empty()){
-      exhaust.in(exhaustDelay, exhaustOff);
-    }
-  }
-  */
-}
+  chiller.loop();
+} 
