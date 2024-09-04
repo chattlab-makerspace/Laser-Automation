@@ -15,13 +15,15 @@
 #define JOB_RUNNING 6
 #define MANUAL_RESET 7
 
-auto chiller = timer_create_default();
+auto air = timer_create_default();
 auto exhaust = timer_create_default();
+auto chiller = timer_create_default();
 
 unsigned long second = 1000;
 unsigned long minute = 60 * second;
 unsigned long hour = 60 * minute;
 
+unsigned long airDelay = 2 * second;
 unsigned long exhaustDelay = 20 * second;
 unsigned long chillerDelay = 15 * minute;
 
@@ -53,28 +55,34 @@ bool chillerOff(void *){
   return false;
 }
 
+bool airOff(void *){
+  digitalWrite(AIR_RELAY, OFF);
+  return false;
+}
+
 void loop() {
-  chiller.tick();
+  air.tick();
   exhaust.tick();
+  chiller.tick();
   // Air Handling
-  if (digitalRead(AIR_REQUEST) == ON && digitalRead(AIR_RELAY) == OFF){
+  if (digitalRead(MACHINE_POWER) == ON && digitalRead(AIR_REQUEST) == ON && digitalRead(AIR_RELAY) == OFF){
     digitalWrite(AIR_RELAY, ON);
   }
-  if (digitalRead(AIR_REQUEST) == OFF && digitalRead(AIR_RELAY) == ON){
-    digitalWrite(AIR_RELAY, OFF);
+  if ((digitalRead(MACHINE_POWER) == OFF || (digitalRead(AIR_REQUEST) == OFF) && digitalRead(AIR_RELAY) == ON)){
+    air.in(airDelay, airOff);
   }
   // Chiller Handling
   if (digitalRead(MACHINE_POWER) == ON && digitalRead(COOLER_RELAY) == OFF){
     digitalWrite(COOLER_RELAY, ON);
   }
   if (digitalRead(MACHINE_POWER) == OFF && digitalRead(COOLER_RELAY) == ON){
-  chiller.in(chillerDelay, chillerOff);
+    chiller.in(chillerDelay, chillerOff);
   }
   // Exhaust Handling
-  if (digitalRead(JOB_RUNNING) == ON && digitalRead(FAN_RELAY) == OFF){
+  if (digitalRead(MACHINE_POWER) == ON && digitalRead(JOB_RUNNING) == ON && digitalRead(FAN_RELAY) == OFF){
     digitalWrite(FAN_RELAY, ON);
   }
-  if (digitalRead(JOB_RUNNING) == OFF && digitalRead(FAN_RELAY) == ON){
-  exhaust.in(exhaustDelay, exhaustOff);
+  if ((digitalRead(MACHINE_POWER) == OFF || (digitalRead(JOB_RUNNING) == OFF) && digitalRead(FAN_RELAY) == ON)){
+    exhaust.in(exhaustDelay, exhaustOff);
   }
 }
