@@ -21,24 +21,9 @@
 class Relay {
   private:
     Timer<> timer;
-
-  public:
     int inputPin;
     int outputPin;
     unsigned long delay;
-
-    Relay(int inputPin, int outputPin, unsigned long delay){
-      this->inputPin = inputPin;
-      this->outputPin = outputPin;
-      this->timer = timer_create_default();
-      this->delay = delay;
-    }
-
-    void loop(){
-      timer.tick();
-      turnOn();
-      turnOff();
-    }
 
     void turnOn(){
       if (digitalRead(MACHINE_POWER) == ON && digitalRead(inputPin) == ON){
@@ -63,6 +48,20 @@ class Relay {
           timer.in(delay, [](void *argument) -> bool { return ((Relay*)argument)->relayOff(); }, this);
         }
       }
+    }
+
+  public:
+    Relay(int inputPin, int outputPin, unsigned long delay){
+      this->inputPin = inputPin;
+      this->outputPin = outputPin;
+      this->timer = timer_create_default();
+      this->delay = delay;
+    }
+
+    void loop(){
+      timer.tick();
+      turnOn();
+      turnOff();
     }
 };
 
